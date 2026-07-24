@@ -1,0 +1,6 @@
+{
+  "name": "Royal Agro Management System",
+  "description": "Centralized multi-branch agricultural management system for Royal Agro managing sales, POS, inventory, branches, suppliers, expenses, and CEO reporting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
