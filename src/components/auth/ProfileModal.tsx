@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, Shield, Building2, Key, X, CheckCircle2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { User, Shield, Building2, Key, X, CheckCircle2, Camera, Upload, Trash2 } from 'lucide-react';
 import { User as UserType } from '../../types';
 
 interface ProfileModalProps {
@@ -18,10 +18,33 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [name, setName] = useState(currentUser.name);
   const [email, setEmail] = useState(currentUser.email);
   const [phone, setPhone] = useState(currentUser.phone);
+  const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl || '');
   const [newPassword, setNewPassword] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size exceeds 5MB limit.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setAvatarUrl(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setAvatarUrl('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +52,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       ...currentUser,
       name,
       email,
-      phone
+      phone,
+      avatarUrl: avatarUrl || currentUser.avatarUrl
     });
     setSavedSuccess(true);
     setTimeout(() => {
@@ -57,16 +81,55 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3 mt-4 text-xs">
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <img
-                src={currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100'}
-                alt={currentUser?.name || 'User'}
-                className="w-12 h-12 rounded-full object-cover"
-              />
-              <div>
-                <p className="font-bold text-slate-900">{currentUser?.name || 'User'}</p>
-                <p className="text-[10px] font-mono text-amber-800 font-semibold">{currentUser?.role || ''}</p>
-                <p className="text-[10px] text-slate-500">📍 {currentUser?.branchName || 'Central'}</p>
+            {/* Profile Avatar Card & Upload Option */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="relative group">
+                  <img
+                    src={avatarUrl || currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100'}
+                    alt={currentUser?.name || 'User'}
+                    className="w-14 h-14 rounded-full object-cover ring-2 ring-emerald-500 shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute inset-0 bg-slate-900/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Change Profile Photo"
+                  >
+                    <Camera className="w-5 h-5" />
+                  </button>
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900">{currentUser?.name || 'User'}</p>
+                  <p className="text-[10px] font-mono text-amber-800 font-semibold">{currentUser?.role || ''}</p>
+                  <p className="text-[10px] text-slate-500">📍 {currentUser?.branchName || 'Central'}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-xs transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5" /> Upload Photo
+                </button>
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="px-2 py-1 text-slate-500 hover:text-rose-600 text-[10px] font-semibold flex items-center gap-1 justify-center"
+                  >
+                    <Trash2 className="w-3 h-3" /> Reset
+                  </button>
+                )}
               </div>
             </div>
 

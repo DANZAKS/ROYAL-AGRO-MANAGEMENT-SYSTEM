@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="40" fill="#1B3022"/>
+  <circle cx="96" cy="96" r="76" fill="none" stroke="#7E9D73" stroke-width="4" stroke-dasharray="6 4"/>
+  <path d="M96 36 L112 60 L138 64 L120 84 L124 110 L96 98 L68 110 L72 84 L54 64 L80 60 Z" fill="#7E9D73" opacity="0.3"/>
+  <!-- Wheat / Seed emblem -->
+  <path d="M96 148 C96 110, 130 90, 130 65 C130 45, 110 35, 96 35 C82 35, 62 45, 62 65 C62 90, 96 110, 96 148 Z" fill="#7E9D73"/>
+  <path d="M96 148 L96 45" stroke="#1B3022" stroke-width="3" stroke-linecap="round"/>
+  <path d="M96 85 C110 75, 120 65, 115 55" fill="none" stroke="#1B3022" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M96 105 C82 95, 72 85, 77 75" fill="none" stroke="#1B3022" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="96" y="168" text-anchor="middle" fill="#A3C299" font-family="sans-serif" font-weight="900" font-size="12" letter-spacing="1">ROYAL AGRO</text>
+</svg>

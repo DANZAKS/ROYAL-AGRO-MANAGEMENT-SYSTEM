@@ -13,8 +13,10 @@ import {
   BranchInventory,
   Product,
   StockTransfer,
-  Expense
+  Expense,
+  NotificationItem
 } from '../../types';
+import { DashboardAlertsBanner } from '../notifications/DashboardAlertsBanner';
 
 interface BranchDashboardProps {
   branch?: Branch | null;
@@ -25,7 +27,10 @@ interface BranchDashboardProps {
   products?: Product[];
   transfers?: StockTransfer[];
   expenses?: Expense[];
-  onNavigate?: (tab: string) => void;
+  notifications?: NotificationItem[];
+  onNavigate?: (tab: string, payload?: any) => void;
+  onOpenNotificationCenter?: () => void;
+  onResolveNotification?: (id: string) => void;
 }
 
 export const BranchDashboard: React.FC<BranchDashboardProps> = ({
@@ -37,7 +42,10 @@ export const BranchDashboard: React.FC<BranchDashboardProps> = ({
   products = [],
   transfers = [],
   expenses = [],
-  onNavigate = (_tab: string) => {}
+  notifications = [],
+  onNavigate = (_tab: string, _payload?: any) => {},
+  onOpenNotificationCenter,
+  onResolveNotification
 }) => {
   const targetBranch = branch || activeBranch;
 
@@ -111,6 +119,15 @@ export const BranchDashboard: React.FC<BranchDashboardProps> = ({
           )}
         </div>
       </div>
+
+      {/* Real-time Branch Alerts Banner */}
+      <DashboardAlertsBanner
+        notifications={notifications}
+        branchId={currentBranch.id}
+        onNavigate={onNavigate}
+        onOpenNotificationCenter={onOpenNotificationCenter}
+        onResolveNotification={onResolveNotification}
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -298,6 +315,7 @@ export const BranchDashboard: React.FC<BranchDashboardProps> = ({
                 <th className="px-6 py-3">Items</th>
                 <th className="px-6 py-3 text-right">Amount</th>
                 <th className="px-6 py-3 text-center">Payment</th>
+                <th className="px-6 py-3 text-center">Sync Status</th>
                 <th className="px-6 py-3">Date</th>
               </tr>
             </thead>
@@ -313,6 +331,17 @@ export const BranchDashboard: React.FC<BranchDashboardProps> = ({
                     <span className="px-2 py-1 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 uppercase">
                       {sale.paymentMethod}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {sale.syncStatus === 'pending' ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                        🔴 Offline Queue
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        ✓ Synced
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-stone-500">{sale.date}</td>
                 </tr>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Users,
   Plus,
@@ -10,7 +10,9 @@ import {
   Key,
   Edit2,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Upload,
+  Camera
 } from 'lucide-react';
 import { User, UserRole, Branch } from '../../types';
 
@@ -43,6 +45,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const [role, setRole] = useState<UserRole>('SALES_CASHIER');
   const [branchId, setBranchId] = useState(branches[0]?.id || '');
   const [password, setPassword] = useState('Password123!');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleOpenModal = (u?: User) => {
     if (u) {
@@ -53,6 +57,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       setPhone(u.phone);
       setRole(u.role);
       setBranchId(u.branchId || branches[0]?.id || '');
+      setAvatarUrl(u.avatarUrl || '');
     } else {
       setEditingUser(null);
       setUsername('');
@@ -62,8 +67,26 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       setRole('SALES_CASHIER');
       setBranchId(branches[0]?.id || '');
       setPassword('RoyalAgro2026!');
+      setAvatarUrl('');
     }
     setShowModal(true);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size exceeds 5MB limit.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setAvatarUrl(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -71,6 +94,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     if (!name || !username) return;
 
     const b = branches.find((br) => br.id === branchId);
+    const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200';
 
     if (editingUser) {
       onUpdateUser({
@@ -80,6 +104,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         email,
         phone,
         role,
+        avatarUrl: avatarUrl || editingUser.avatarUrl || defaultAvatar,
         branchId: role === 'CEO' ? null : branchId,
         branchName: role === 'CEO' ? 'All Branches (Headquarters)' : b?.name || ''
       });
@@ -94,7 +119,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         branchId: role === 'CEO' ? null : branchId,
         branchName: role === 'CEO' ? 'All Branches (Headquarters)' : b?.name || '',
         status: 'ACTIVE',
-        avatarUrl: `https://images.unsplash.com/photo-${1530000000000 + Math.floor(Math.random() * 9999999)}?auto=format&fit=crop&q=80&w=200`,
+        avatarUrl: avatarUrl || defaultAvatar,
         createdAt: new Date().toISOString().split('T')[0]
       };
       onAddUser(newUser);
@@ -236,6 +261,45 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3 mt-4 text-xs">
+              {/* Profile Photo Uploader */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="relative group">
+                    <img
+                      src={avatarUrl || editingUser?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100'}
+                      alt="Staff Avatar"
+                      className="w-12 h-12 rounded-full object-cover ring-2 ring-emerald-500 shadow-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute inset-0 bg-slate-900/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Camera className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900 text-xs">Staff Profile Picture</p>
+                    <p className="text-[10px] text-slate-500">Upload custom avatar image</p>
+                  </div>
+                </div>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5" /> Select Photo
+                </button>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Username *</label>

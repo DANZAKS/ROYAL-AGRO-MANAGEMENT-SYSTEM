@@ -10,6 +10,7 @@ import {
   Menu
 } from 'lucide-react';
 import { User, Branch, DateFilterOption } from '../../types';
+import { NetworkStatusIndicator } from '../common/NetworkStatusIndicator';
 
 interface HeaderProps {
   currentUser: User;
@@ -129,8 +130,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right Section: Quick Role Switcher, Notification Bell, User Avatar */}
+      {/* Right Section: Network Status, Quick Role Switcher, Notification Bell, User Avatar */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        {/* PWA Offline & Network Sync Status Indicator */}
+        <NetworkStatusIndicator />
+
         {/* Quick Demo Role Switcher Button */}
         <div className="relative">
           <button

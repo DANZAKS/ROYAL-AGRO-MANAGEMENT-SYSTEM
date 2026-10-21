@@ -12,7 +12,22 @@ import {
   AuditLog,
   StockMovement,
   PurchaseOrder,
-  SaleItem
+  GoodsReceipt,
+  SupplierPayment,
+  SaleItem,
+  CustomerCredit,
+  CreditPayment,
+  SalesReturn,
+  FinancialTransaction,
+  CashSession,
+  CashReconciliation,
+  NotificationSettings,
+  AttendanceRecord,
+  CommissionRecord,
+  CommissionRule,
+  CompanySettings,
+  BusinessRulesSettings,
+  DataImportRecord
 } from '../types';
 import {
   INITIAL_BRANCHES,
@@ -27,7 +42,21 @@ import {
   INITIAL_NOTIFICATIONS,
   INITIAL_AUDIT_LOGS,
   INITIAL_STOCK_MOVEMENTS,
-  INITIAL_PURCHASES
+  INITIAL_PURCHASES,
+  INITIAL_GOODS_RECEIPTS,
+  INITIAL_SUPPLIER_PAYMENTS,
+  INITIAL_CREDITS,
+  INITIAL_CREDIT_PAYMENTS,
+  INITIAL_SALES_RETURNS,
+  INITIAL_FINANCIAL_TRANSACTIONS,
+  INITIAL_CASH_SESSIONS,
+  INITIAL_CASH_RECONCILIATIONS,
+  INITIAL_ATTENDANCE,
+  INITIAL_COMMISSIONS,
+  INITIAL_COMMISSION_RULES,
+  DEFAULT_COMPANY_SETTINGS,
+  DEFAULT_BUSINESS_RULES,
+  INITIAL_DATA_IMPORTS
 } from '../data/initialData';
 
 const STORAGE_KEY = 'ROYAL_AGRO_SYS_DATA_V1';
@@ -48,8 +77,46 @@ export interface AppState {
   movements: StockMovement[];
   purchases: PurchaseOrder[];
   purchaseOrders: PurchaseOrder[];
+  goodsReceipts: GoodsReceipt[];
+  supplierPayments: SupplierPayment[];
+  credits: CustomerCredit[];
+  creditPayments: CreditPayment[];
+  salesReturns: SalesReturn[];
+  financialTransactions?: FinancialTransaction[];
+  cashSessions?: CashSession[];
+  cashReconciliations?: CashReconciliation[];
+  notificationSettings?: NotificationSettings;
+  backupHistory?: any[];
+  lastIntegrityReport?: any;
   currentUser: User | null;
+  attendance?: AttendanceRecord[];
+  commissions?: CommissionRecord[];
+  commissionRules?: CommissionRule[];
+  companySettings?: CompanySettings;
+  businessRules?: BusinessRulesSettings;
+  dataImports?: DataImportRecord[];
 }
+
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  soundEnabled: true,
+  browserPushEnabled: false,
+  significantSaleThreshold: 500000,
+  cashDiscrepancyThreshold: 5000,
+  expiryWarningDays: [90, 60, 30, 7],
+  enabledCategories: {
+    INVENTORY_LOW_STOCK: true,
+    EXPIRY_ALERT: true,
+    CUSTOMER_CREDIT: true,
+    SALES_RETURNS: true,
+    PURCHASE_SUPPLIER: true,
+    BRANCH_TRANSFERS: true,
+    EXPENSE_RECONCILIATION: true,
+    SECURITY_USERS: true,
+    SYNC_OFFLINE: true,
+    SYSTEM_ANNOUNCEMENT: true
+  },
+  mutedBranches: []
+};
 
 export function loadAppState(): AppState {
   try {
@@ -74,7 +141,24 @@ export function loadAppState(): AppState {
         movements: m,
         purchases: po,
         purchaseOrders: po,
-        currentUser: parsed.currentUser || INITIAL_USERS[0] // CEO default
+        goodsReceipts: parsed.goodsReceipts || INITIAL_GOODS_RECEIPTS,
+        supplierPayments: parsed.supplierPayments || INITIAL_SUPPLIER_PAYMENTS,
+        credits: parsed.credits || INITIAL_CREDITS,
+        creditPayments: parsed.creditPayments || INITIAL_CREDIT_PAYMENTS,
+        salesReturns: parsed.salesReturns || INITIAL_SALES_RETURNS,
+        financialTransactions: parsed.financialTransactions || INITIAL_FINANCIAL_TRANSACTIONS,
+        cashSessions: parsed.cashSessions || INITIAL_CASH_SESSIONS,
+        cashReconciliations: parsed.cashReconciliations || INITIAL_CASH_RECONCILIATIONS,
+        notificationSettings: parsed.notificationSettings ? { ...DEFAULT_NOTIFICATION_SETTINGS, ...parsed.notificationSettings } : DEFAULT_NOTIFICATION_SETTINGS,
+        backupHistory: parsed.backupHistory || [],
+        lastIntegrityReport: parsed.lastIntegrityReport || null,
+        currentUser: parsed.currentUser || INITIAL_USERS[0], // CEO default
+        attendance: parsed.attendance || INITIAL_ATTENDANCE,
+        commissions: parsed.commissions || INITIAL_COMMISSIONS,
+        commissionRules: parsed.commissionRules || INITIAL_COMMISSION_RULES,
+        companySettings: parsed.companySettings || DEFAULT_COMPANY_SETTINGS,
+        businessRules: parsed.businessRules || DEFAULT_BUSINESS_RULES,
+        dataImports: parsed.dataImports || INITIAL_DATA_IMPORTS
       };
     }
   } catch (err) {
@@ -98,13 +182,34 @@ export function loadAppState(): AppState {
     movements: INITIAL_STOCK_MOVEMENTS,
     purchases: INITIAL_PURCHASES,
     purchaseOrders: INITIAL_PURCHASES,
-    currentUser: INITIAL_USERS[0]
+    goodsReceipts: INITIAL_GOODS_RECEIPTS,
+    supplierPayments: INITIAL_SUPPLIER_PAYMENTS,
+    credits: INITIAL_CREDITS,
+    creditPayments: INITIAL_CREDIT_PAYMENTS,
+    salesReturns: INITIAL_SALES_RETURNS,
+    financialTransactions: INITIAL_FINANCIAL_TRANSACTIONS,
+    cashSessions: INITIAL_CASH_SESSIONS,
+    cashReconciliations: INITIAL_CASH_RECONCILIATIONS,
+    notificationSettings: DEFAULT_NOTIFICATION_SETTINGS,
+    currentUser: INITIAL_USERS[0],
+    attendance: INITIAL_ATTENDANCE,
+    commissions: INITIAL_COMMISSIONS,
+    commissionRules: INITIAL_COMMISSION_RULES,
+    companySettings: DEFAULT_COMPANY_SETTINGS,
+    businessRules: DEFAULT_BUSINESS_RULES,
+    dataImports: INITIAL_DATA_IMPORTS
   };
 }
+
+import { syncFullAppStateToIndexedDB } from '../offline/offlineStorage';
 
 export function saveAppState(state: AppState): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Asynchronously synchronize full app state to IndexedDB for offline-first support
+    syncFullAppStateToIndexedDB(state).catch((err) => {
+      console.error('Error syncing AppState to IndexedDB:', err);
+    });
   } catch (err) {
     console.error('Error saving state to localStorage:', err);
   }
@@ -139,17 +244,24 @@ export function createAuditLog(
 export function createNotification(
   title: string,
   message: string,
-  type: NotificationItem['type'],
+  type: NotificationItem['type'] = 'SYSTEM',
   branchId?: string,
   targetRole?: User['role']
 ): NotificationItem {
+  const now = new Date().toISOString();
   return {
     id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
     title,
     message,
     type,
+    category: 'SYSTEM_ANNOUNCEMENT',
+    eventType: type || 'SYSTEM',
+    priority: 'MEDIUM',
+    status: 'UNREAD',
+    createdAt: now,
     read: false,
-    timestamp: new Date().toISOString(),
+    isRead: false,
+    timestamp: now,
     branchId,
     targetRole
   };

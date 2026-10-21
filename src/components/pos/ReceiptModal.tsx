@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Printer, Download, CheckCircle2, Sprout, Building2 } from 'lucide-react';
 import { Sale, Branch } from '../../types';
+import { renderCode128Svg } from '../../services/barcodeService';
 
 interface ReceiptModalProps {
   sale: Sale | null;
@@ -15,6 +16,56 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, branch, onClos
     window.print();
   };
 
+  const handleDownload = () => {
+    const textContent = `================================================
+ROYAL AGRO SEEDS & AGRO MANAGEMENT
+Official Sales Transaction Receipt
+================================================
+Receipt No     : ${sale.receiptNo}
+Date & Time    : ${sale.date}
+Branch         : ${branch ? branch.name : sale.branchName}
+Branch Address : ${branch?.address || 'Royal Agro Commercial Depot'}
+Contact Phone  : ${branch?.phone || '+234 803 000 0000'}
+Cashier Staff  : ${sale.staffName}
+Payment Method : ${sale.paymentMethod}
+Customer Name  : ${sale.customerName || 'N/A'} ${sale.customerPhone ? `(${sale.customerPhone})` : ''}
+------------------------------------------------
+PURCHASED ITEMS:
+------------------------------------------------
+${sale.items
+  .map(
+    (item, i) =>
+      `${i + 1}. ${item.productName} (SKU: ${item.sku})
+   Qty: ${item.quantity} ${item.unit} | Unit Price: ₦${item.unitPrice.toLocaleString()} | Subtotal: ₦${item.subtotal.toLocaleString()}`
+  )
+  .join('\n')}
+------------------------------------------------
+FINANCIAL BREAKDOWN:
+------------------------------------------------
+Subtotal            : ₦${sale.subtotal.toLocaleString()}
+Discount Applied    : -₦${sale.discount.toLocaleString()}
+TOTAL INVOICE VALUE : ₦${sale.totalAmount.toLocaleString()}
+Amount Paid Now     : ₦${(sale.amountPaid ?? sale.totalAmount).toLocaleString()}
+${
+  (sale.balanceDue ?? 0) > 0
+    ? `Balance Due (Credit): ₦${(sale.balanceDue ?? 0).toLocaleString()}\nCredit Due Date     : ${sale.creditDueDate || 'N/A'}\n`
+    : ''
+}================================================
+Thank you for choosing Royal Agro Certified Seeds & Inputs!
+Goods received in good condition are non-refundable after 48 hours.
+================================================`;
+
+    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Receipt_${sale.receiptNo}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 my-8">
@@ -26,8 +77,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, branch, onClos
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleDownload}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+            >
+              <Download className="w-4 h-4" /> Download
+            </button>
+            <button
               onClick={handlePrint}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
             >
               <Printer className="w-4 h-4" /> Print
             </button>
@@ -50,6 +107,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, branch, onClos
             <p className="font-sans text-[11px] font-bold text-slate-800 uppercase tracking-widest">
               Central Agro Management System
             </p>
+            {(sale.paymentMethod === 'CREDIT' || (sale.balanceDue ?? 0) > 0) && (
+              <div className="my-2 py-1 px-3 bg-amber-100 border-2 border-amber-500 rounded-lg text-amber-900 font-extrabold text-sm uppercase tracking-wider inline-block">
+                *** CREDIT SALE ***
+              </div>
+            )}
             <p className="font-sans text-xs text-slate-600 font-semibold mt-1">
               📍 {branch ? branch.name : sale.branchName}
             </p>
@@ -124,16 +186,43 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, branch, onClos
               </div>
             )}
             <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-300">
-              <span>Total Amount Paid:</span>
-              <span className="text-emerald-700">₦{sale.totalAmount.toLocaleString()}</span>
+              <span>Total Invoice Amount:</span>
+              <span className="text-slate-900">₦{sale.totalAmount.toLocaleString()}</span>
             </div>
+
+            <div className="flex justify-between text-emerald-800 font-bold pt-1">
+              <span>Amount Paid Now:</span>
+              <span>₦{(sale.amountPaid ?? sale.totalAmount).toLocaleString()}</span>
+            </div>
+
+            {(sale.balanceDue ?? 0) > 0 && (
+              <div className="flex justify-between text-rose-700 font-extrabold pt-1">
+                <span>Balance Due / Outstanding Credit:</span>
+                <span className="bg-rose-100 px-1.5 py-0.5 rounded text-rose-900">₦{(sale.balanceDue ?? 0).toLocaleString()}</span>
+              </div>
+            )}
+
+            {sale.creditDueDate && (sale.balanceDue ?? 0) > 0 && (
+              <div className="flex justify-between text-amber-800 font-bold text-[10px] pt-0.5">
+                <span>Credit Payment Due Date:</span>
+                <span>{sale.creditDueDate}</span>
+              </div>
+            )}
           </div>
 
           {/* Barcode & Stamp */}
           <div className="text-center pt-4 border-t border-dashed border-slate-300 space-y-2">
-            <div className="bg-slate-100 p-2 rounded-lg font-mono tracking-widest text-[10px] text-slate-700 inline-block font-bold">
-              ||| | ||||| || ||| |||| || |||| | ||
-            </div>
+            <div
+              className="py-1 flex items-center justify-center overflow-hidden"
+              dangerouslySetInnerHTML={{
+                __html: renderCode128Svg(sale.receiptNo, {
+                  height: 36,
+                  barWidth: 1.3,
+                  showText: true,
+                  fontSize: 10
+                })
+              }}
+            />
             <p className="font-sans text-[10px] text-slate-500 font-semibold">
               Thank you for choosing Royal Agro Certified Seeds & Inputs!
             </p>
@@ -143,11 +232,17 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, branch, onClos
           </div>
         </div>
 
-        {/* Footer Close Button */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 text-right print:hidden">
+        {/* Footer Action Buttons */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between print:hidden">
+          <button
+            onClick={handleDownload}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+          >
+            <Download className="w-4 h-4" /> Download Receipt
+          </button>
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold"
+            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-sm transition-colors"
           >
             Done
           </button>

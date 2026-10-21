@@ -5,9 +5,11 @@ import {
   Boxes,
   ShoppingCart,
   Users,
+  CreditCard,
   Truck,
   ArrowRightLeft,
   BarChart3,
+  Undo2,
   ShieldCheck,
   UserCheck,
   Sprout,
@@ -15,6 +17,10 @@ import {
   ChevronRight,
   LogOut,
   Sliders,
+  CloudUpload,
+  Wallet,
+  Database,
+  Award,
   X
 } from 'lucide-react';
 import { User, Branch, UserRole } from '../../types';
@@ -82,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'TRANSFERS',
-      label: 'Stock Transfers',
+      label: 'Transfers & Reordering',
       icon: ArrowRightLeft,
       show: isInventory || isCEO
     },
@@ -99,10 +105,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
       show: isSales || isCEO
     },
     {
+      id: 'CREDIT_MANAGEMENT',
+      label: 'Credit & Receivables',
+      icon: CreditCard,
+      show: true
+    },
+    {
+      id: 'RETURNS',
+      label: 'Sales Returns',
+      icon: Undo2,
+      show: true
+    },
+    {
       id: 'SUPPLIERS',
       label: 'Suppliers & Receiving',
       icon: Truck,
       show: isInventory || isCEO
+    },
+    {
+      id: 'FINANCE',
+      label: 'Financials & Cashbook',
+      icon: Wallet,
+      show: true
     },
     {
       id: 'EXPENSES',
@@ -114,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'REPORTS',
       label: 'Reports & Analytics',
       icon: BarChart3,
-      show: isManager
+      show: isManager || isSales || isInventory
     },
     {
       id: 'USERS',
@@ -123,10 +147,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
       show: isCEO
     },
     {
+      id: 'STAFF_PERFORMANCE',
+      label: 'Attendance & Commissions',
+      icon: Award,
+      show: true
+    },
+    {
       id: 'AUDIT_LOGS',
       label: 'Audit Trail System',
       icon: ShieldCheck,
       show: isCEO
+    },
+    {
+      id: 'BACKUP_RECOVERY',
+      label: 'Backup & Recovery',
+      icon: Database,
+      show: isCEO
+    },
+    {
+      id: 'SYNC_CENTER',
+      label: 'Synchronization Center',
+      icon: CloudUpload,
+      show: true
     }
   ];
 

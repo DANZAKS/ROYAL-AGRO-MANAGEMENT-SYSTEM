@@ -3,7 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <title>Royal Agro Management System</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#059669" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Royal Agro Certified Seeds, Agro Inputs & Retail POS Management System" />
+    <script>
+      (function() {
+        try {
+          var _ethereum = window.ethereum;
+          Object.defineProperty(window, 'ethereum', {
+            get: function() { return _ethereum; },
+            set: function(val) { _ethereum = val; },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          // Property may already be defined non-configurably by an extension
+        }
+      })();
+
+      window.addEventListener('error', function(event) {
+        if (event.message && (event.message.includes('ethereum') || event.message.includes('Cannot redefine property'))) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+
+      // Register PWA Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').then(
+            function(registration) {
+              console.log('[PWA] Service Worker registered successfully with scope:', registration.scope);
+            },
+            function(err) {
+              console.log('[PWA] Service Worker registration failed:', err);
+            }
+          );
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
