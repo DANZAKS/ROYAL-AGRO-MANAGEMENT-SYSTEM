@@ -37,7 +37,8 @@ import {
   Sale,
   SaleItem,
   User,
-  ProductCategory
+  ProductCategory,
+  CompanySettings
 } from '../../types';
 import { ReceiptModal } from './ReceiptModal';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
@@ -56,6 +57,7 @@ interface POSModuleProps {
   currentUser: User;
   onCompleteSale: (newSale: Sale) => void;
   onAddCustomer: (customer: Customer) => void;
+  companySettings?: CompanySettings;
 }
 
 interface CartItem extends SaleItem {
@@ -70,7 +72,8 @@ export const POSModule: React.FC<POSModuleProps> = ({
   customers,
   currentUser,
   onCompleteSale,
-  onAddCustomer
+  onAddCustomer,
+  companySettings
 }) => {
   const { isOnline } = useNetworkStatus();
   const currentBranch = activeBranch || branches[0] || null;
@@ -952,6 +955,7 @@ export const POSModule: React.FC<POSModuleProps> = ({
       <ReceiptModal
         sale={completedSale}
         branch={currentBranch || undefined}
+        companySettings={companySettings}
         onClose={() => setCompletedSale(null)}
       />
 

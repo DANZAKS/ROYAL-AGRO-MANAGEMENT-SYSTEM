@@ -35,6 +35,18 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   onToggleUserStatus,
   onResetPassword
 }) => {
+  if (currentUser.role !== 'CEO') {
+    return (
+      <div className="bg-white rounded-2xl border border-rose-200 p-8 text-center space-y-3 shadow-xs">
+        <Shield className="w-12 h-12 text-rose-500 mx-auto" />
+        <h2 className="text-base font-bold text-slate-900">Access Restricted</h2>
+        <p className="text-xs text-slate-600 max-w-md mx-auto">
+          Staff Account and Role-Based Access Control (RBAC) management is restricted to CEO / Super Administrator accounts.
+        </p>
+      </div>
+    );
+  }
+
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 

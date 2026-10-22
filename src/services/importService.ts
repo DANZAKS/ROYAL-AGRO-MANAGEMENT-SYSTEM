@@ -350,13 +350,16 @@ export function validateCustomerRows(
         id: `cust-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         fullName: rawName,
         phone: rawPhone,
-        email: rawEmail || undefined,
+        email: rawEmail || '',
         address: rawAddress || 'Commercial Farm Hub',
         state: rawState || 'Kano',
         registeredBranchId: defaultBranchId,
         farmerType: (rawFarmerType as any) || 'COMMERCIAL_GRAIN',
         creditLimit: isNaN(rawCreditLimit) ? 150000 : rawCreditLimit,
+        creditBalance: 0,
         currentBalance: 0,
+        totalPurchases: 0,
+        totalSpent: 0,
         createdAt: new Date().toISOString()
       };
     }
@@ -380,7 +383,7 @@ export function validateSupplierRows(
   rows: Record<string, string>[],
   existingSuppliers: Supplier[]
 ): ImportRowValidation<Supplier>[] {
-  const existingNames = new Set(existingSuppliers.map((s) => s.name.toUpperCase()));
+  const existingNames = new Set(existingSuppliers.map((s) => (s.companyName || s.name || '').toUpperCase()));
   const seenNamesInFile = new Set<string>();
 
   return rows.map((row, index) => {
@@ -419,14 +422,17 @@ export function validateSupplierRows(
     if (isValid) {
       parsed = {
         id: `sup-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        companyName: rawName,
         name: rawName,
         contactPerson: rawContact || 'Supply Director',
         phone: rawPhone,
         email: rawEmail || `${rawName.toLowerCase().replace(/[^a-z0-9]/g, '')}@supplier.ng`,
         address: rawAddress || 'Commercial Seed Production Zone',
         state: rawState || 'Kaduna',
+        categoriesSupplied: ['SEEDS' as const, 'FERTILIZERS' as const],
         suppliedCategories: ['SEEDS', 'FERTILIZERS'],
         paymentTerms: rawTerms,
+        creditTerms: rawTerms,
         taxId: rawTaxId || undefined,
         status: 'ACTIVE',
         createdAt: new Date().toISOString()

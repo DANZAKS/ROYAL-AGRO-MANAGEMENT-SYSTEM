@@ -40,7 +40,7 @@ export function getDB(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
 
   dbPromise = new Promise((resolve, reject) => {
-    if (!('indexedDB' in window)) {
+    if (typeof window === 'undefined' || typeof indexedDB === 'undefined') {
       reject(new Error('IndexedDB is not supported in this environment.'));
       return;
     }

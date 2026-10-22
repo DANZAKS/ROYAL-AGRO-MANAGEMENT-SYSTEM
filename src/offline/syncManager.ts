@@ -142,7 +142,9 @@ const ENTITY_PRIORITY: Record<EntityType, number> = {
   NOTIFICATION: 11,
   ATTENDANCE: 10,
   COMMISSION: 11,
-  COMMISSION_RULE: 1
+  COMMISSION_RULE: 1,
+  SETTINGS: 1,
+  DATA_IMPORT: 2
 };
 
 function dispatchProgress(info: SyncProgressInfo) {

@@ -1,16 +1,31 @@
 import React from 'react';
 import { X, Printer, Download, CheckCircle2, Sprout, Building2 } from 'lucide-react';
-import { Sale, Branch } from '../../types';
+import { Sale, Branch, CompanySettings } from '../../types';
 import { renderCode128Svg } from '../../services/barcodeService';
 
 interface ReceiptModalProps {
   sale: Sale | null;
   branch?: Branch;
+  companySettings?: CompanySettings;
   onClose: () => void;
 }
 
-export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, branch, onClose }) => {
+export const ReceiptModal: React.FC<ReceiptModalProps> = ({
+  sale,
+  branch,
+  companySettings,
+  onClose
+}) => {
   if (!sale) return null;
+
+  const companyName = companySettings?.companyName || 'ROYAL AGRO SEEDS & AGRO';
+  const tagline = companySettings?.tagline || 'Central Agro Management System';
+  const currencySymbol = companySettings?.currencySymbol || '₦';
+  const branchName = branch ? branch.name : sale.branchName;
+  const branchAddress = branch?.address || companySettings?.headOfficeAddress || 'Royal Agro Commercial Depot';
+  const branchPhone = branch?.phone || companySettings?.phone || '+234 803 000 0000';
+  const footerNote = companySettings?.receiptFooter || 'Thank you for choosing Royal Agro Certified Seeds & Inputs!';
+  const showBarcode = companySettings?.enableBarcodeReceipt !== false;
 
   const handlePrint = () => {
     window.print();
@@ -18,40 +33,41 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ sale, branch, onClos
 
   const handleDownload = () => {
     const textContent = `================================================
-ROYAL AGRO SEEDS & AGRO MANAGEMENT
+${companyName.toUpperCase()}
+${tagline}
 Official Sales Transaction Receipt
 ================================================
 Receipt No     : ${sale.receiptNo}
 Date & Time    : ${sale.date}
-Branch         : ${branch ? branch.name : sale.branchName}
-Branch Address : ${branch?.address || 'Royal Agro Commercial Depot'}
-Contact Phone  : ${branch?.phone || '+234 803 000 0000'}
+Branch         : ${branchName}
+Branch Address : ${branchAddress}
+Contact Phone  : ${branchPhone}
 Cashier Staff  : ${sale.staffName}
 Payment Method : ${sale.paymentMethod}
 Customer Name  : ${sale.customerName || 'N/A'} ${sale.customerPhone ? `(${sale.customerPhone})` : ''}
-------------------------------------------------
+${companySettings?.taxIdentificationNumber ? `Tax TIN No     : ${companySettings.taxIdentificationNumber}\n` : ''}------------------------------------------------
 PURCHASED ITEMS:
 ------------------------------------------------
 ${sale.items
   .map(
     (item, i) =>
       `${i + 1}. ${item.productName} (SKU: ${item.sku})
-   Qty: ${item.quantity} ${item.unit} | Unit Price: ₦${item.unitPrice.toLocaleString()} | Subtotal: ₦${item.subtotal.toLocaleString()}`
+   Qty: ${item.quantity} ${item.unit} | Unit Price: ${currencySymbol}${item.unitPrice.toLocaleString()} | Subtotal: ${currencySymbol}${item.subtotal.toLocaleString()}`
   )
   .join('\n')}
 ------------------------------------------------
 FINANCIAL BREAKDOWN:
 ------------------------------------------------
-Subtotal            : ₦${sale.subtotal.toLocaleString()}
-Discount Applied    : -₦${sale.discount.toLocaleString()}
-TOTAL INVOICE VALUE : ₦${sale.totalAmount.toLocaleString()}
-Amount Paid Now     : ₦${(sale.amountPaid ?? sale.totalAmount).toLocaleString()}
+Subtotal            : ${currencySymbol}${sale.subtotal.toLocaleString()}
+Discount Applied    : -${currencySymbol}${sale.discount.toLocaleString()}
+TOTAL INVOICE VALUE : ${currencySymbol}${sale.totalAmount.toLocaleString()}
+Amount Paid Now     : ${currencySymbol}${(sale.amountPaid ?? sale.totalAmount).toLocaleString()}
 ${
   (sale.balanceDue ?? 0) > 0
-    ? `Balance Due (Credit): ₦${(sale.balanceDue ?? 0).toLocaleString()}\nCredit Due Date     : ${sale.creditDueDate || 'N/A'}\n`
+    ? `Balance Due (Credit): ${currencySymbol}${(sale.balanceDue ?? 0).toLocaleString()}\nCredit Due Date     : ${sale.creditDueDate || 'N/A'}\n`
     : ''
 }================================================
-Thank you for choosing Royal Agro Certified Seeds & Inputs!
+${companySettings?.receiptHeader ? `${companySettings.receiptHeader}\n` : ''}${footerNote}
 Goods received in good condition are non-refundable after 48 hours.
 ================================================`;
 
@@ -102,22 +118,32 @@ Goods received in good condition are non-refundable after 48 hours.
           {/* Company Brand Logo & Header */}
           <div className="text-center border-b border-dashed border-slate-300 pb-4">
             <div className="flex items-center justify-center gap-2 text-emerald-800 font-extrabold text-lg tracking-tight mb-1">
-              <Sprout className="w-6 h-6 text-amber-500" /> ROYAL AGRO SEEDS & AGRO
+              <Sprout className="w-6 h-6 text-amber-500" /> {companyName}
             </div>
             <p className="font-sans text-[11px] font-bold text-slate-800 uppercase tracking-widest">
-              Central Agro Management System
+              {tagline}
             </p>
+            {companySettings?.registrationNumber && (
+              <p className="font-sans text-[10px] text-slate-500 font-medium">
+                RC: {companySettings.registrationNumber} {companySettings.taxIdentificationNumber && `• TIN: ${companySettings.taxIdentificationNumber}`}
+              </p>
+            )}
             {(sale.paymentMethod === 'CREDIT' || (sale.balanceDue ?? 0) > 0) && (
               <div className="my-2 py-1 px-3 bg-amber-100 border-2 border-amber-500 rounded-lg text-amber-900 font-extrabold text-sm uppercase tracking-wider inline-block">
                 *** CREDIT SALE ***
               </div>
             )}
             <p className="font-sans text-xs text-slate-600 font-semibold mt-1">
-              📍 {branch ? branch.name : sale.branchName}
+              📍 {branchName}
             </p>
             <p className="font-sans text-[11px] text-slate-500">
-              {branch?.address || 'Royal Agro Commercial Depot'} • Tel: {branch?.phone || '+234 803 000 0000'}
+              {branchAddress} • Tel: {branchPhone}
             </p>
+            {companySettings?.receiptHeader && (
+              <p className="font-sans text-[10px] text-slate-600 italic mt-1 pt-1 border-t border-slate-100">
+                {companySettings.receiptHeader}
+              </p>
+            )}
           </div>
 
           {/* Transaction Metadata */}
@@ -165,8 +191,8 @@ Goods received in good condition are non-refundable after 48 hours.
                       <p className="text-[9px] text-slate-500 font-sans">SKU: {item.sku} ({item.unit})</p>
                     </td>
                     <td className="py-1.5 text-center font-bold">{item.quantity}</td>
-                    <td className="py-1.5 text-right font-sans">₦{item.unitPrice.toLocaleString()}</td>
-                    <td className="py-1.5 text-right font-extrabold font-sans">₦{item.subtotal.toLocaleString()}</td>
+                    <td className="py-1.5 text-right font-sans">{currencySymbol}{item.unitPrice.toLocaleString()}</td>
+                    <td className="py-1.5 text-right font-extrabold font-sans">{currencySymbol}{item.subtotal.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -177,28 +203,28 @@ Goods received in good condition are non-refundable after 48 hours.
           <div className="space-y-1 text-right text-[11px] font-sans pt-1">
             <div className="flex justify-between text-slate-600">
               <span>Subtotal:</span>
-              <span>₦{sale.subtotal.toLocaleString()}</span>
+              <span>{currencySymbol}{sale.subtotal.toLocaleString()}</span>
             </div>
             {sale.discount > 0 && (
               <div className="flex justify-between text-rose-600 font-semibold">
                 <span>Discount Applied:</span>
-                <span>-₦{sale.discount.toLocaleString()}</span>
+                <span>-{currencySymbol}{sale.discount.toLocaleString()}</span>
               </div>
             )}
             <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-300">
               <span>Total Invoice Amount:</span>
-              <span className="text-slate-900">₦{sale.totalAmount.toLocaleString()}</span>
+              <span className="text-slate-900">{currencySymbol}{sale.totalAmount.toLocaleString()}</span>
             </div>
 
             <div className="flex justify-between text-emerald-800 font-bold pt-1">
               <span>Amount Paid Now:</span>
-              <span>₦{(sale.amountPaid ?? sale.totalAmount).toLocaleString()}</span>
+              <span>{currencySymbol}{(sale.amountPaid ?? sale.totalAmount).toLocaleString()}</span>
             </div>
 
             {(sale.balanceDue ?? 0) > 0 && (
               <div className="flex justify-between text-rose-700 font-extrabold pt-1">
                 <span>Balance Due / Outstanding Credit:</span>
-                <span className="bg-rose-100 px-1.5 py-0.5 rounded text-rose-900">₦{(sale.balanceDue ?? 0).toLocaleString()}</span>
+                <span className="bg-rose-100 px-1.5 py-0.5 rounded text-rose-900">{currencySymbol}{(sale.balanceDue ?? 0).toLocaleString()}</span>
               </div>
             )}
 
@@ -212,19 +238,21 @@ Goods received in good condition are non-refundable after 48 hours.
 
           {/* Barcode & Stamp */}
           <div className="text-center pt-4 border-t border-dashed border-slate-300 space-y-2">
-            <div
-              className="py-1 flex items-center justify-center overflow-hidden"
-              dangerouslySetInnerHTML={{
-                __html: renderCode128Svg(sale.receiptNo, {
-                  height: 36,
-                  barWidth: 1.3,
-                  showText: true,
-                  fontSize: 10
-                })
-              }}
-            />
-            <p className="font-sans text-[10px] text-slate-500 font-semibold">
-              Thank you for choosing Royal Agro Certified Seeds & Inputs!
+            {showBarcode && (
+              <div
+                className="py-1 flex items-center justify-center overflow-hidden"
+                dangerouslySetInnerHTML={{
+                  __html: renderCode128Svg(sale.receiptNo, {
+                    height: 36,
+                    barWidth: 1.3,
+                    showText: true,
+                    fontSize: 10
+                  })
+                }}
+              />
+            )}
+            <p className="font-sans text-[10px] text-slate-600 font-semibold">
+              {footerNote}
             </p>
             <p className="font-sans text-[9px] text-slate-400 italic">
               Goods received in good condition are non-refundable after 48 hours.

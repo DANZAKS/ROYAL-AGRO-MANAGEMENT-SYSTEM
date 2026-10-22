@@ -32,6 +32,9 @@ export async function queueOperation(data: {
 
 export async function getPendingOperations(): Promise<PendingOperation[]> {
   try {
+    if (typeof window === 'undefined' || typeof indexedDB === 'undefined') {
+      return [];
+    }
     const ops = await getAllFromStore<PendingOperation>(STORES.PENDING_OPERATIONS);
     return ops.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   } catch (err) {

@@ -1,0 +1,235 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for Role-Based Access Control (RBAC)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isCEO() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'CEO' || 
+        getUserData().role == 'CEO'
+      );
+    }
+
+    function isBranchManager(branchId) {
+      return isAuthenticated() && (
+        isCEO() || (
+          (request.auth.token.role == 'BRANCH_MANAGER' || getUserData().role == 'BRANCH_MANAGER') &&
+          (getUserData().branchId == branchId || request.auth.token.branchId == branchId)
+        )
+      );
+    }
+
+    function isStaffMember(branchId) {
+      return isAuthenticated() && (
+        isCEO() ||
+        getUserData().branchId == branchId ||
+        request.auth.token.branchId == branchId
+      );
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      // CEO has full control; users can read their own profile
+      allow read: if isAuthenticated() && (isCEO() || request.auth.uid == userId);
+      // Only CEO can create, update roles, or delete users
+      allow write: if isCEO();
+      // Users can update their own personal contact details (not role/branchId)
+      allow update: if isAuthenticated() && request.auth.uid == userId &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'branchId', 'status']);
+    }
+
+    // 2. Branches Collection
+    match /branches/{branchId} {
+      allow read: if isAuthenticated();
+      allow write: if isCEO();
+    }
+
+    // 3. Products Catalog
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      // Inventory officers, managers, and CEO can manage catalog
+      allow write: if isAuthenticated() && (
+        isCEO() || 
+        request.auth.token.role in ['BRANCH_MANAGER', 'INVENTORY_OFFICER'] ||
+        getUserData().role in ['BRANCH_MANAGER', 'INVENTORY_OFFICER']
+      );
+    }
+
+    // 4. Branch Inventory Store
+    match /inventory/{invId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (
+        isCEO() || 
+        isStaffMember(resource.data.branchId) ||
+        isStaffMember(request.resource.data.branchId)
+      );
+    }
+
+    // 5. Sales Transactions
+    match /sales/{saleId} {
+      allow read: if isAuthenticated() && (
+        isCEO() || isStaffMember(resource.data.branchId)
+      );
+      // Cashiers, managers, CEO can record new sales
+      allow create: if isAuthenticated() && (
+        isCEO() || isStaffMember(request.resource.data.branchId)
+      );
+      // Sales cannot be deleted; cancellations must preserve audit trail
+      allow update: if isAuthenticated() && (
+        isCEO() || isBranchManager(resource.data.branchId)
+      ) && request.resource.data.status == 'CANCELLED';
+      allow delete: if false; // Immutable ledger
+    }
+
+    // 6. Customers & Credit
+    match /customers/{customerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /credits/{creditId} {
+      allow read: if isAuthenticated() && (isCEO() || isStaffMember(resource.data.branchId));
+      allow write: if isAuthenticated() && (isCEO() || isStaffMember(request.resource.data.branchId));
+      allow delete: if isCEO();
+    }
+
+    match /creditPayments/{paymentId} {
+      allow read: if isAuthenticated() && (isCEO() || isStaffMember(resource.data.branchId));
+      allow create: if isAuthenticated() && (isCEO() || isStaffMember(request.resource.data.branchId));
+      allow update, delete: if isCEO();
+    }
+
+    // 7. Stock Transfers
+    match /transfers/{transferId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && (
+        isCEO() || 
+        isStaffMember(request.resource.data.sourceBranchId) ||
+        isStaffMember(request.resource.data.destinationBranchId)
+      );
+      allow delete: if isCEO();
+    }
+
+    // 8. Suppliers, Purchase Orders & Goods Receipts
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (
+        isCEO() || getUserData().role in ['BRANCH_MANAGER', 'INVENTORY_OFFICER']
+      );
+    }
+
+    match /purchaseOrders/{poId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && (
+        isCEO() || isStaffMember(request.resource.data.branchId)
+      );
+      allow delete: if isCEO();
+    }
+
+    match /goodsReceipts/{receiptId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && (
+        isCEO() || isStaffMember(request.resource.data.branchId)
+      );
+      allow delete: if isCEO();
+    }
+
+    // 9. Financial Transactions, Cash Sessions & Expenses
+    match /expenses/{expenseId} {
+      allow read: if isAuthenticated() && (isCEO() || isStaffMember(resource.data.branchId));
+      allow create: if isAuthenticated() && (isCEO() || isStaffMember(request.resource.data.branchId));
+      allow update: if isCEO() || isBranchManager(resource.data.branchId);
+      allow delete: if false;
+    }
+
+    match /financialTransactions/{txnId} {
+      allow read: if isAuthenticated() && (isCEO() || isStaffMember(resource.data.branchId));
+      allow write: if isCEO();
+      allow delete: if false;
+    }
+
+    match /cashSessions/{sessionId} {
+      allow read, write: if isAuthenticated() && (
+        isCEO() || isStaffMember(request.resource.data.branchId)
+      );
+    }
+
+    match /cashReconciliations/{recId} {
+      allow read: if isAuthenticated() && (isCEO() || isStaffMember(resource.data.branchId));
+      allow write: if isAuthenticated() && (
+        isCEO() || isBranchManager(request.resource.data.branchId)
+      );
+    }
+
+    // 10. Staff Attendance & Performance Commissions
+    match /attendance/{attId} {
+      allow read: if isAuthenticated() && (
+        isCEO() || 
+        resource.data.userId == request.auth.uid || 
+        isBranchManager(resource.data.branchId)
+      );
+      allow create: if isAuthenticated() && (
+        isCEO() || request.resource.data.userId == request.auth.uid
+      );
+      allow update: if isAuthenticated() && (
+        isCEO() || 
+        isBranchManager(resource.data.branchId) || 
+        (resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['explanation', 'correctionRequest']))
+      );
+      allow delete: if isCEO();
+    }
+
+    match /commissions/{commId} {
+      allow read: if isAuthenticated() && (
+        isCEO() || 
+        resource.data.userId == request.auth.uid || 
+        isBranchManager(resource.data.branchId)
+      );
+      allow write: if isCEO() || isBranchManager(request.resource.data.branchId);
+    }
+
+    match /commissionRules/{ruleId} {
+      allow read: if isAuthenticated();
+      allow write: if isCEO();
+    }
+
+    // 11. System Settings & Business Rules
+    match /companySettings/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isCEO();
+    }
+
+    match /businessRules/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isCEO();
+    }
+
+    match /dataImports/{importId} {
+      allow read: if isAuthenticated() && isCEO();
+      allow create: if isAuthenticated() && isCEO();
+      allow update, delete: if isCEO();
+    }
+
+    // 12. Audit Logs & System Notifications
+    match /auditLogs/{logId} {
+      allow read: if isAuthenticated() && isCEO();
+      allow create: if isAuthenticated(); // Append-only audit logger
+      allow update, delete: if false; // Immutable audit security
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+  }
+}

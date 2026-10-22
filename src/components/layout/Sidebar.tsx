@@ -21,6 +21,7 @@ import {
   Wallet,
   Database,
   Award,
+  Settings,
   X
 } from 'lucide-react';
 import { User, Branch, UserRole } from '../../types';
@@ -163,6 +164,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Backup & Recovery',
       icon: Database,
       show: isCEO
+    },
+    {
+      id: 'SETTINGS',
+      label: 'System Settings',
+      icon: Settings,
+      show: isCEO || isManager
     },
     {
       id: 'SYNC_CENTER',

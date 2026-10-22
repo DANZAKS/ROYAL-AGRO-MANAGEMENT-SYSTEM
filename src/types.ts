@@ -501,10 +501,12 @@ export interface Customer {
   email: string;
   address: string;
   state: string;
+  farmerType?: string;
   totalPurchases: number;
   totalSpent: number;
   creditLimit?: number;
   creditBalance?: number;
+  currentBalance?: number;
   storeCreditBalance?: number;
   totalReturns?: number;
   totalRefunds?: number;
@@ -518,12 +520,14 @@ export interface Supplier {
   id: string;
   supplierCode?: string;
   companyName: string;
+  name?: string; // Backwards compatible alias for companyName
   contactPerson: string;
   phone: string;
   email: string;
   address: string;
   state?: string;
   categoriesSupplied: ProductCategory[];
+  suppliedCategories?: ProductCategory[] | string[];
   status: 'ACTIVE' | 'INACTIVE';
   bankName?: string;
   bankAccountName?: string;
@@ -531,6 +535,7 @@ export interface Supplier {
   taxId?: string;
   notes?: string;
   creditTerms?: string;
+  paymentTerms?: string;
   createdAt: string;
   updatedAt?: string;
   syncStatus?: 'synced' | 'pending' | 'failed' | 'conflict';

@@ -35,7 +35,10 @@ import {
   NotificationSettings,
   AttendanceRecord,
   CommissionRecord,
-  CommissionRule
+  CommissionRule,
+  CompanySettings,
+  BusinessRulesSettings,
+  DataImportRecord
 } from './types';
 
 // Layout Components
@@ -65,6 +68,7 @@ import { StaffAttendancePerformanceModule } from './components/staff/StaffAttend
 import { AuditLogViewer } from './components/audit/AuditLogViewer';
 import { SyncCenter } from './components/sync/SyncCenter';
 import { BackupRecoveryModule } from './components/backup/BackupRecoveryModule';
+import { SettingsLayout } from './components/settings/SettingsLayout';
 
 // Overlay Modals
 import { NotificationCenter } from './components/notifications/NotificationCenter';
@@ -2470,11 +2474,25 @@ export default function App() {
   };
 
   const handleUpdateUser = (user: User) => {
+    const isCEO = appState.currentUser?.role === 'CEO';
+    const existing = (appState.users || []).find((u) => u.id === user.id);
+    const safeUser: User = isCEO
+      ? user
+      : {
+          ...user,
+          id: existing?.id || user.id,
+          role: existing?.role || user.role,
+          branchId: existing?.branchId ?? user.branchId,
+          branchName: existing?.branchName ?? user.branchName,
+          status: existing?.status || user.status
+        };
+
     setAppState((prev) => ({
       ...prev,
-      users: (prev.users || []).map((u) => (u.id === user.id ? user : u)),
-      currentUser: prev.currentUser?.id === user.id ? user : prev.currentUser
+      users: (prev.users || []).map((u) => (u.id === safeUser.id ? safeUser : u)),
+      currentUser: prev.currentUser?.id === safeUser.id ? safeUser : prev.currentUser
     }));
+    logAudit('USER_UPDATED', `Updated account for @${safeUser.username || safeUser.name}`);
   };
 
   const handleToggleUserStatus = (userId: string) => {
@@ -2572,6 +2590,65 @@ export default function App() {
       'COMMISSION_PAYMENT_DISBURSED',
       `Commission ₦${commission.netCommissionAmount.toLocaleString()} paid to ${commission.userName} via ${paymentDetails.paymentMethod}. Ref: ${paymentDetails.paymentReference}`
     );
+  };
+
+  // Module 19: System Settings, Business Rules & Bulk Import Handlers
+  const handleUpdateCompanySettings = (updated: CompanySettings, auditNote: string) => {
+    setAppState((prev) => ({
+      ...prev,
+      companySettings: updated
+    }));
+    logAudit('COMPANY_SETTINGS_UPDATED', auditNote || 'Updated corporate company profile and settings');
+  };
+
+  const handleUpdateBusinessRules = (updated: BusinessRulesSettings, auditNote: string) => {
+    setAppState((prev) => ({
+      ...prev,
+      businessRules: updated
+    }));
+    logAudit('BUSINESS_RULES_UPDATED', auditNote || 'Updated business policies and rules');
+  };
+
+  const handleCommitProducts = (newProducts: Product[], importRecord: DataImportRecord) => {
+    setAppState((prev) => ({
+      ...prev,
+      products: [...newProducts, ...(prev.products || [])],
+      dataImports: [importRecord, ...(prev.dataImports || [])]
+    }));
+    logAudit('BULK_IMPORT_PRODUCTS', `Imported ${newProducts.length} products via CSV [Ref: ${importRecord.importReference}]`);
+  };
+
+  const handleCommitCustomers = (newCustomers: Customer[], importRecord: DataImportRecord) => {
+    setAppState((prev) => ({
+      ...prev,
+      customers: [...newCustomers, ...(prev.customers || [])],
+      dataImports: [importRecord, ...(prev.dataImports || [])]
+    }));
+    logAudit('BULK_IMPORT_CUSTOMERS', `Imported ${newCustomers.length} customers via CSV [Ref: ${importRecord.importReference}]`);
+  };
+
+  const handleCommitSuppliers = (newSuppliers: Supplier[], importRecord: DataImportRecord) => {
+    setAppState((prev) => ({
+      ...prev,
+      suppliers: [...newSuppliers, ...(prev.suppliers || [])],
+      dataImports: [importRecord, ...(prev.dataImports || [])]
+    }));
+    logAudit('BULK_IMPORT_SUPPLIERS', `Imported ${newSuppliers.length} suppliers via CSV [Ref: ${importRecord.importReference}]`);
+  };
+
+  const handleCommitOpeningStock = (
+    updatedInventory: BranchInventory[],
+    movements: StockMovement[],
+    importRecord: DataImportRecord
+  ) => {
+    setAppState((prev) => ({
+      ...prev,
+      inventory: updatedInventory,
+      stockMovements: [...movements, ...(prev.stockMovements || [])],
+      movements: [...movements, ...(prev.movements || [])],
+      dataImports: [importRecord, ...(prev.dataImports || [])]
+    }));
+    logAudit('BULK_IMPORT_OPENING_STOCK', `Imported opening stock inventory balances [Ref: ${importRecord.importReference}]`);
   };
 
   // Switch actor / Login
@@ -2793,6 +2870,7 @@ export default function App() {
                 currentUser={appState.currentUser}
                 onCompleteSale={handleCompleteSale}
                 onAddCustomer={handleAddCustomer}
+                companySettings={appState.companySettings}
               />
             )}
 
@@ -3017,12 +3095,34 @@ export default function App() {
                 onLogAudit={logAudit}
               />
             )}
+
+            {/* Module 19: System Settings, Business Configuration & Data Import */}
+            {activeTab === 'SETTINGS' && (
+              <SettingsLayout
+                appState={appState}
+                currentUser={appState.currentUser}
+                onUpdateCompanySettings={handleUpdateCompanySettings}
+                onUpdateBusinessRules={handleUpdateBusinessRules}
+                onAddBranch={handleAddBranch}
+                onUpdateBranch={handleUpdateBranch}
+                onToggleBranchStatus={handleToggleBranchStatus}
+                onCommitProducts={handleCommitProducts}
+                onCommitCustomers={handleCommitCustomers}
+                onCommitSuppliers={handleCommitSuppliers}
+                onCommitOpeningStock={handleCommitOpeningStock}
+              />
+            )}
           </div>
         </main>
       </div>
 
       {/* Receipt Modal for Printable Receipts */}
-      <ReceiptModal sale={activeReceiptSale} onClose={() => setActiveReceiptSale(null)} />
+      <ReceiptModal
+        sale={activeReceiptSale}
+        branch={appState.branches.find((b) => b.id === activeReceiptSale?.branchId)}
+        companySettings={appState.companySettings}
+        onClose={() => setActiveReceiptSale(null)}
+      />
 
       {/* Module 13: Enterprise Notification Center Slide-Over */}
       <NotificationCenter
